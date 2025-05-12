@@ -9,7 +9,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../App';
-import { load } from '../utils/storage';
+import {load} from '../utils/storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Main'>;
 
@@ -20,12 +20,12 @@ const STORAGE_KEYS = {
   BLOCKED_COUNT: '@duit_blocked_count',
 } as const;
 
-export function MainScreen({ route, navigation }: Props): React.JSX.Element {
+export function MainScreen({route, navigation}: Props): React.JSX.Element {
   const [goal, setGoal] = useState<string | null>(null);
   const [tone, setTone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [blockedCount, setBlockedCount] = useState(0);
-  
+
   useEffect(() => {
     const init = async () => {
       if (route?.params) {
@@ -38,7 +38,7 @@ export function MainScreen({ route, navigation }: Props): React.JSX.Element {
           setTone(data.tone);
         }
       }
-  
+
       try {
         const count = await AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_COUNT);
         setBlockedCount(count ? parseInt(count, 10) : 0);
@@ -48,22 +48,21 @@ export function MainScreen({ route, navigation }: Props): React.JSX.Element {
         setIsLoading(false);
       }
     };
-  
+
     init();
   }, []);
-  
-  
-    // Load blocked count from storage
-    const loadBlockedCount = async () => {
-      try {
-        const count = await AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_COUNT);
-        setBlockedCount(count ? parseInt(count, 10) : 0);
-      } catch (error) {
-        console.error('Error loading blocked count:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+
+  // Load blocked count from storage
+  const loadBlockedCount = async () => {
+    try {
+      const count = await AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_COUNT);
+      setBlockedCount(count ? parseInt(count, 10) : 0);
+    } catch (error) {
+      console.error('Error loading blocked count:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEditSetup = () => {
     navigation.navigate('GoalSelection');
@@ -73,7 +72,10 @@ export function MainScreen({ route, navigation }: Props): React.JSX.Element {
     const newCount = blockedCount + 1;
     setBlockedCount(newCount);
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.BLOCKED_COUNT, newCount.toString());
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.BLOCKED_COUNT,
+        newCount.toString(),
+      );
     } catch (error) {
       console.error('Error saving blocked count:', error);
     }
@@ -144,7 +146,9 @@ export function MainScreen({ route, navigation }: Props): React.JSX.Element {
         <TouchableOpacity style={styles.tabItem}>
           <Text style={[styles.tabText, styles.activeTab]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('History')}>
           <Text style={styles.tabText}>History</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem}>
@@ -289,4 +293,4 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-}); 
+});
