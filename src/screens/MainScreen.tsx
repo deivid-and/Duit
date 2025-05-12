@@ -5,13 +5,17 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
+  Animated,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type {RootStackParamList} from '../../App';
 import {load} from '../utils/storage';
+import Svg, { Circle, Path } from 'react-native-svg';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Main'>;
+type Props = BottomTabScreenProps<RootStackParamList, 'Main'>;
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -20,11 +24,72 @@ const STORAGE_KEYS = {
   BLOCKED_COUNT: '@duit_blocked_count',
 } as const;
 
+const MOTIVATIONAL_QUOTES = [
+  "Small progress is still progress!",
+  "You're building better habits, one day at a time",
+  "Stay focused on your goals, future you will thank you",
+  "Every time you resist, you grow stronger",
+];
+
+const CircularProgress = ({ percentage }: { percentage: number }) => {
+  const radius = 40;
+  const strokeWidth = 10;
+  const center = radius + strokeWidth;
+  const circumference = 2 * Math.PI * radius;
+  const progressStroke = (circumference * (100 - percentage)) / 100;
+
+  return (
+    <Svg width={center * 2} height={center * 2}>
+      <Circle
+        cx={center}
+        cy={center}
+        r={radius}
+        stroke="#E0E0E0"
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Circle
+        cx={center}
+        cy={center}
+        r={radius}
+        stroke="#2196F3"
+        strokeWidth={strokeWidth}
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={progressStroke}
+        fill="none"
+        strokeLinecap="round"
+        transform={`rotate(-90 ${center} ${center})`}
+      />
+      <Text
+        x={center}
+        y={center}
+        textAnchor="middle"
+        fontSize="16"
+        fill="#000000"
+        dy=".3em">
+        {`${Math.round(percentage)}%`}
+      </Text>
+    </Svg>
+  );
+};
+
 export function MainScreen({route, navigation}: Props): React.JSX.Element {
   const [goal, setGoal] = useState<string | null>(null);
   const [tone, setTone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [dailyProgress, setDailyProgress] = useState(65); // Mock progress
+  const [pointsEarned, setPointsEarned] = useState(0);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [quote] = useState(
+    MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
+  );
+
+  const appLimits = [
+    { name: 'Instagram', used: 25, limit: 60 },
+    { name: 'TikTok', used: 15, limit: 30 },
+    { name: 'YouTube', used: 45, limit: 90 },
+  ];
 
   useEffect(() => {
     const init = async () => {
@@ -50,35 +115,23 @@ export function MainScreen({route, navigation}: Props): React.JSX.Element {
     };
 
     init();
-  }, []);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, [route?.params, fadeAnim]);
 
-  // Load blocked count from storage
-  const loadBlockedCount = async () => {
-    try {
-      const count = await AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_COUNT);
-      setBlockedCount(count ? parseInt(count, 10) : 0);
-    } catch (error) {
-      console.error('Error loading blocked count:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditSetup = () => {
-    navigation.navigate('GoalSelection');
-  };
-
-  const handleSimulateBlock = async () => {
-    const newCount = blockedCount + 1;
-    setBlockedCount(newCount);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.BLOCKED_COUNT,
-        newCount.toString(),
-      );
-    } catch (error) {
-      console.error('Error saving blocked count:', error);
-    }
+  const handleOpenBlockedApp = () => {
+    // Implementation for opening blocked app with delay
+    Alert.alert(
+      'Start Focus Timer',
+      'The app will open after a 60-second mindfulness pause. Use this time to reflect on your goals.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Start Timer', onPress: () => {} },
+      ]
+    );
   };
 
   if (isLoading) {
@@ -93,68 +146,112 @@ export function MainScreen({route, navigation}: Props): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Premium Upsell Placeholder */}
-      <View style={styles.premiumBanner}>
-        <Text style={styles.premiumText}>Try Premium</Text>
-      </View>
-
-      <View style={styles.content}>
-        {/* User Settings Summary */}
-        <View style={styles.settingsSummary}>
-          <Text style={styles.goalText}>
-            Goal: <Text style={styles.highlightText}>{goal}</Text>
-          </Text>
-          <Text style={styles.toneText}>
-            Style: <Text style={styles.highlightText}>{tone}</Text>
-          </Text>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleEditSetup}
-            activeOpacity={0.8}>
-            <Text style={styles.editButtonText}>Edit Setup</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats Card */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>App Opens Blocked Today</Text>
-          <Text style={styles.statsNumber}>{blockedCount}</Text>
-          <TouchableOpacity
-            style={styles.simulateButton}
-            onPress={handleSimulateBlock}
-            activeOpacity={0.8}>
-            <Text style={styles.simulateButtonText}>Simulate Block Event</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Progress Graph Placeholder */}
-        <View style={styles.graphCard}>
-          <Text style={styles.graphTitle}>Daily Progress</Text>
-          <View style={styles.graphPlaceholder}>
-            <Text style={styles.placeholderText}>Graph Coming Soon</Text>
+      <ScrollView style={styles.scrollView}>
+        {/* Goal & Progress Section */}
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <View style={styles.goalHeader}>
+            <View>
+              <Text style={styles.goalLabel}>Current Goal</Text>
+              <Text style={styles.goalText}>{goal}</Text>
+              <Text style={styles.toneText}>
+                Style: <Text style={styles.highlightText}>{tone}</Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('GoalSelection')}
+              activeOpacity={0.8}>
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Ad Placeholder */}
-        <View style={styles.adPlaceholder}>
-          <Text style={styles.placeholderText}>Ad Space</Text>
-        </View>
-      </View>
+        {/* Progress Circle & Points */}
+        <Animated.View 
+          style={[styles.section, styles.progressSection, { opacity: fadeAnim }]}>
+          <View style={styles.progressContainer}>
+            <CircularProgress percentage={dailyProgress} />
+            <View style={styles.pointsContainer}>
+              <Text style={styles.pointsLabel}>Today's Points</Text>
+              <Text style={styles.pointsValue}>{pointsEarned}</Text>
+              {pointsEarned > 0 && (
+                <Text style={styles.pointsBonus}>+50 for early quit!</Text>
+              )}
+            </View>
+          </View>
+          <Text style={styles.progressText}>
+            {dailyProgress}% toward a Perfect Day
+          </Text>
+        </Animated.View>
 
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={[styles.tabText, styles.activeTab]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate('History')}>
-          <Text style={styles.tabText}>History</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
+        {/* App Limits Overview */}
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <Text style={styles.sectionTitle}>Today's App Usage</Text>
+          {appLimits.map((app, index) => (
+            <View key={app.name} style={styles.appLimit}>
+              <View style={styles.appInfo}>
+                <Text style={styles.appName}>{app.name}</Text>
+                <Text style={styles.appTime}>
+                  {app.used}m / {app.limit}m
+                </Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${(app.used / app.limit) * 100}%`,
+                      backgroundColor:
+                        app.used / app.limit > 0.9
+                          ? '#F44336'
+                          : app.used / app.limit > 0.7
+                          ? '#FFC107'
+                          : '#4CAF50',
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
+        </Animated.View>
+
+        {/* Next Check-in */}
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <Text style={styles.sectionTitle}>Next Check-in</Text>
+          <View style={styles.checkInCard}>
+            <Text style={styles.checkInTime}>6:15 PM</Text>
+            <Text style={styles.checkInDesc}>
+              AI will help you review your progress
+            </Text>
+          </View>
+        </Animated.View>
+
+        {/* Quick Access */}
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={styles.blockButton}
+            onPress={handleOpenBlockedApp}
+            activeOpacity={0.8}>
+            <Text style={styles.blockButtonText}>
+              Open Blocked App with Delay
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Motivational Quote */}
+        <Animated.View style={[styles.section, styles.quoteSection, { opacity: fadeAnim }]}>
+          <Text style={styles.quoteText}>{quote}</Text>
+        </Animated.View>
+
+        {/* Streak Status */}
+        <Animated.View style={[styles.section, styles.streakSection, { opacity: fadeAnim }]}>
+          <View style={styles.streakInfo}>
+            <Text style={styles.streakTitle}>Current Streak</Text>
+            <Text style={styles.streakCount}>5 days 🔥</Text>
+            <Text style={styles.streakBonus}>+100 bonus points at 7 days!</Text>
+          </View>
+        </Animated.View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -162,135 +259,176 @@ export function MainScreen({route, navigation}: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F7FA',
   },
-  content: {
+  scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
-  premiumBanner: {
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 8,
-    alignItems: 'center',
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  premiumText: {
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  goalLabel: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  goalText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  toneText: {
     fontSize: 14,
     color: '#666666',
   },
-  settingsSummary: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  goalText: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 8,
-  },
-  toneText: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 16,
-  },
   highlightText: {
-    color: '#007AFF',
+    color: '#2196F3',
     fontWeight: '600',
   },
   editButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FA',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignSelf: 'flex-start',
   },
   editButtonText: {
+    color: '#2196F3',
     fontSize: 14,
-    color: '#333333',
-    fontWeight: '500',
-  },
-  statsCard: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  statsTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  statsNumber: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  simulateButton: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  simulateButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
     fontWeight: '600',
   },
-  graphCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  graphTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 16,
-  },
-  graphPlaceholder: {
-    height: 200,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    justifyContent: 'center',
+  progressSection: {
     alignItems: 'center',
   },
-  adPlaceholder: {
-    height: 100,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  tabBar: {
+  progressContainer: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
-    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 16,
   },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 12,
+  pointsContainer: {
     alignItems: 'center',
   },
-  tabText: {
+  pointsLabel: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  pointsValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#2196F3',
+  },
+  pointsBonus: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 4,
+  },
+  progressText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+  appLimit: {
+    marginBottom: 12,
+  },
+  appInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  appName: {
+    fontSize: 14,
+    color: '#333333',
+  },
+  appTime: {
     fontSize: 14,
     color: '#666666',
   },
-  activeTab: {
-    color: '#007AFF',
+  progressBar: {
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  checkInCard: {
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+  },
+  checkInTime: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#1976D2',
+    marginBottom: 4,
+  },
+  checkInDesc: {
+    fontSize: 14,
+    color: '#1976D2',
+  },
+  blockButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  blockButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  quoteSection: {
+    backgroundColor: '#FFF8E1',
+  },
+  quoteText: {
+    fontSize: 16,
+    color: '#F57C00',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  streakSection: {
+    marginBottom: 16,
+  },
+  streakInfo: {
+    alignItems: 'center',
+  },
+  streakTitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  streakCount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#F57C00',
+    marginBottom: 4,
+  },
+  streakBonus: {
+    fontSize: 12,
+    color: '#4CAF50',
   },
 });

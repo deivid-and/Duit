@@ -16,13 +16,14 @@ import {ToneSelectionScreen} from './src/screens/ToneSelectionScreen';
 import {PermissionsIntroScreen} from './src/screens/PermissionsIntroScreen';
 import {TestInteractionScreen} from './src/screens/TestInteractionScreen';
 import {SetupCompleteScreen} from './src/screens/SetupCompleteScreen';
-import {MainScreen} from './src/screens/MainScreen';
+import { MainTabs } from './src/navigation/MainTabs';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 
 export type RootStackParamList = {
   Welcome: undefined;
   GoalSelection: undefined;
   History: undefined;
+  Settings: undefined;
   ToneSelection: {
     goal: 'study' | 'fitness' | 'sideHustle';
   };
@@ -83,7 +84,7 @@ function App(): React.JSX.Element {
         <Stack.Screen name="PermissionsIntro" component={PermissionsIntroScreen} />
         <Stack.Screen name="TestInteraction" component={TestInteractionScreen} />
         <Stack.Screen name="SetupComplete" component={SetupCompleteScreen} />
-        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="History" component={HistoryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
