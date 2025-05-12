@@ -5,7 +5,9 @@
  * @format
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { load } from './src/utils/storage';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {WelcomeScreen} from './src/screens/WelcomeScreen';
@@ -43,10 +45,32 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const data = await load('userSettings');
+      if (data?.setupComplete) {
+        setInitialRoute('Main');
+      } else {
+        setInitialRoute('Welcome');
+      }
+    };
+    checkUser();
+  }, []);
+
+  if (!initialRoute) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName={initialRoute as keyof RootStackParamList}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -62,5 +86,6 @@ function App(): React.JSX.Element {
     </NavigationContainer>
   );
 }
+
 
 export default App;

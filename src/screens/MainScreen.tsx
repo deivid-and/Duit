@@ -9,6 +9,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../App';
+import { load } from '../utils/storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Main'>;
 
@@ -19,24 +20,39 @@ const STORAGE_KEYS = {
   BLOCKED_COUNT: '@duit_blocked_count',
 } as const;
 
-export function MainScreen({navigation, route}: Props): React.JSX.Element {
-  const [blockedCount, setBlockedCount] = useState(0);
+export function MainScreen({ route, navigation }: Props): React.JSX.Element {
+  const [goal, setGoal] = useState<string | null>(null);
+  const [tone, setTone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const {goal, tone} = route.params;
-
+  const [blockedCount, setBlockedCount] = useState(0);
+  
   useEffect(() => {
-    // Save initial goal and tone from navigation params
-    const saveInitialSettings = async () => {
+    const init = async () => {
+      if (route?.params) {
+        setGoal(route.params.goal);
+        setTone(route.params.tone);
+      } else {
+        const data = await load('userSettings');
+        if (data) {
+          setGoal(data.goal);
+          setTone(data.tone);
+        }
+      }
+  
       try {
-        await AsyncStorage.multiSet([
-          [STORAGE_KEYS.GOAL, goal],
-          [STORAGE_KEYS.TONE, tone],
-        ]);
+        const count = await AsyncStorage.getItem(STORAGE_KEYS.BLOCKED_COUNT);
+        setBlockedCount(count ? parseInt(count, 10) : 0);
       } catch (error) {
-        console.error('Error saving settings:', error);
+        console.error('Error loading blocked count:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-
+  
+    init();
+  }, []);
+  
+  
     // Load blocked count from storage
     const loadBlockedCount = async () => {
       try {
@@ -48,10 +64,6 @@ export function MainScreen({navigation, route}: Props): React.JSX.Element {
         setIsLoading(false);
       }
     };
-
-    saveInitialSettings();
-    loadBlockedCount();
-  }, [goal, tone]);
 
   const handleEditSetup = () => {
     navigation.navigate('GoalSelection');

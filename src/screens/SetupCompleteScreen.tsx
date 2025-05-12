@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../App';
+import { save } from '../utils/storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SetupComplete'>;
 
@@ -22,7 +23,13 @@ export function SetupCompleteScreen({
       : "SETUP COMPLETE! Time to crush those bad habits. NO EXCUSES! 💪";
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    await save('userSettings', {
+      goal: route.params.goal,
+      tone: route.params.tone,
+      setupComplete: true,
+    });
+  
     navigation.navigate('Main', {
       goal: route.params.goal,
       tone: route.params.tone,
